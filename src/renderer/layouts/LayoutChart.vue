@@ -316,9 +316,10 @@ function handleCopyLink() {
     externalApi.copyText(`https://spinsha.re/song/${chart.value.id}`);
 }
 
-async function playPreview() {
+function playPreview() {
     if (previewAvailable.value && chart.value) {
-        loadChart(chart.value);
+        const audioUrl = chart.value.paths?.ogg ?? `https://spinsha.re/uploads/audio/${chart.value.fileReference}.ogg`;
+        loadChart(chart.value, audioUrl);
         play();
     }
 }

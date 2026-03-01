@@ -58,7 +58,7 @@ export function useAudioPlayer() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    function loadChart(chart, chartPlaylist = null, playlistIndex = -1) {
+    function loadChart(chart, audioUrl, chartPlaylist = null, playlistIndex = -1) {
         // Reset audio without changing isPlaying state — using stop() would
         // briefly set isPlaying to false and trigger BGM to fade back in.
         audioElement.pause();
@@ -77,11 +77,8 @@ export function useAudioPlayer() {
             currentPlaylistIndex.value = 0;
         }
 
-        // Update the audio source
-        if (chart) {
-            const audioUrl = chart.paths?.ogg || `https://spinsha.re/uploads/audio/${chart.fileReference}.ogg`;
+        if (audioUrl) {
             audioElement.src = audioUrl;
-            audioElement.load();
         }
     }
 
@@ -89,20 +86,17 @@ export function useAudioPlayer() {
         if (playlist.value.length === 0) return;
 
         const nextIndex = (currentPlaylistIndex.value + 1) % playlist.value.length;
-        const nextChart = playlist.value[nextIndex];
+        let nextChart = playlist.value[nextIndex];
 
         if (nextChart) {
             // If the chart doesn't have paths, we need to fetch it from API
-            if (!nextChart.paths?.ogg && window.spshApi) {
+            if (!nextChart.paths?.ogg) {
                 const fullChart = await window.spshApi.getChartDetail(nextChart.id);
-                if (fullChart) {
-                    loadChart(fullChart, playlist.value, nextIndex);
-                    play();
-                    return;
-                }
+                if (fullChart) nextChart = fullChart;
             }
 
-            loadChart(nextChart, playlist.value, nextIndex);
+            const audioUrl = nextChart.paths?.ogg ?? `https://spinsha.re/uploads/audio/${nextChart.fileReference}.ogg`;
+            loadChart(nextChart, audioUrl, playlist.value, nextIndex);
             play();
         }
     }
@@ -111,20 +105,17 @@ export function useAudioPlayer() {
         if (playlist.value.length === 0) return;
 
         const prevIndex = currentPlaylistIndex.value - 1 < 0 ? playlist.value.length - 1 : currentPlaylistIndex.value - 1;
-        const prevChart = playlist.value[prevIndex];
+        let prevChart = playlist.value[prevIndex];
 
         if (prevChart) {
             // If the chart doesn't have paths, we need to fetch it from API
-            if (!prevChart.paths?.ogg && window.spshApi) {
+            if (!prevChart.paths?.ogg) {
                 const fullChart = await window.spshApi.getChartDetail(prevChart.id);
-                if (fullChart) {
-                    loadChart(fullChart, playlist.value, prevIndex);
-                    play();
-                    return;
-                }
+                if (fullChart) prevChart = fullChart;
             }
 
-            loadChart(prevChart, playlist.value, prevIndex);
+            const audioUrl = prevChart.paths?.ogg ?? `https://spinsha.re/uploads/audio/${prevChart.fileReference}.ogg`;
+            loadChart(prevChart, audioUrl, playlist.value, prevIndex);
             play();
         }
     }

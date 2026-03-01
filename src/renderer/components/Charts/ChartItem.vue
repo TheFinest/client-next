@@ -260,10 +260,10 @@ async function handlePlayPreview(event) {
             console.error('Failed to fetch chart details');
             return;
         }
+        const audioUrl = fullChartData.paths?.ogg;
+        if (!audioUrl) return;
 
-        loadChart(fullChartData, props.chartList.length > 0 ? props.chartList : null);
-
-        // Play the audio
+        loadChart(props, audioUrl, props.chartList.length > 0 ? props.chartList : null);
         play();
     }
 }
