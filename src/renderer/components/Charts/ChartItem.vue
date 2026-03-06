@@ -188,10 +188,6 @@ const props = defineProps({
         type: [String, Boolean],
         default: false,
     },
-    chartList: {
-        type: Array,
-        default: () => [],
-    },
 });
 
 const mitt = inject('mitt');
@@ -263,7 +259,7 @@ async function handlePlayPreview(event) {
         const audioUrl = fullChartData.paths?.ogg;
         if (!audioUrl) return;
 
-        loadChart(props, audioUrl, props.chartList.length > 0 ? props.chartList : null);
+        loadChart(props, audioUrl);
         play();
     }
 }

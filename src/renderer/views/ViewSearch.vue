@@ -111,7 +111,6 @@
                             v-for="chart in results"
                             :key="chart.id"
                             v-bind="chart"
-                            :chart-list="results"
                         />
                     </ChartGrid>
                 </section>
@@ -165,7 +164,7 @@
 <script setup>
 import LayoutBase from '@/layouts/LayoutBase.vue';
 import { useRoute } from 'vue-router';
-import { computed, inject, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, inject, onMounted, ref, watch } from 'vue';
 import Loader from '@/components/Loader.vue';
 import UserItem from '@/components/Users/UserItem.vue';
 import PlaylistGrid from '@/components/Playlists/PlaylistGrid.vue';
@@ -175,8 +174,10 @@ import ChartItem from '@/components/Charts/ChartItem.vue';
 import Remixicon from '@/components/Remixicon.vue';
 import Switch from '@/components/Switch.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import { useAudioPlayer } from '@/composables/useAudioPlayer';
 
 const api = inject('api');
+const { setPlaylist } = useAudioPlayer();
 const route = useRoute();
 const searchType = computed(() => route.query.type);
 const searchQuery = computed(() => route.query.query);
@@ -223,6 +224,10 @@ async function loadResults() {
 
     // Maximum 500 results
     results.value = results.value.slice(0, 500);
+
+    if (searchType.value === 'charts') {
+        setPlaylist(results.value);
+    }
 
     isLoading.value = false;
 }

@@ -72,7 +72,6 @@
                         v-for="chart in playlist.songs"
                         :key="chart.id"
                         v-bind="chart"
-                        :chart-list="playlist.songs"
                     />
                 </ChartGrid>
             </main>
@@ -82,6 +81,7 @@
 
 <script setup>
 import { computed, inject, onMounted, ref } from 'vue';
+import { useAudioPlayer } from '@/composables/useAudioPlayer';
 import { useRoute } from 'vue-router';
 import LayoutBase from '@/layouts/LayoutBase.vue';
 import Loader from '@/components/Loader.vue';
@@ -99,6 +99,7 @@ const queue = inject('queue');
 const route = useRoute();
 const playlistId = route.params.playlistId;
 const playlist = ref(null);
+const { setPlaylist } = useAudioPlayer();
 
 onMounted(async () => {
     playlist.value = await api.getPlaylist(playlistId);
@@ -111,6 +112,7 @@ onMounted(async () => {
         await router.push('/');
         return;
     }
+    setPlaylist(playlist.value.songs);
 });
 
 const allCharters = computed(() => {

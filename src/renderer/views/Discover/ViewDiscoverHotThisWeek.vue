@@ -12,7 +12,6 @@
                     v-for="chart in charts"
                     :key="chart.id"
                     v-bind="chart"
-                    :chart-list="charts"
                 />
             </template>
         </ChartGrid>
@@ -47,16 +46,19 @@ import { inject, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Remixicon from '@/components/Remixicon.vue';
 import ChartItemPlaceholder from '@/components/Charts/ChartItemPlaceholder.vue';
+import { useAudioPlayer } from '@/composables/useAudioPlayer';
 
 const route = useRoute();
 const router = useRouter();
 const currentPage = ref(Number(route.params.page) || 0);
 const charts = ref([]);
 const api = inject('api');
+const { setPlaylist } = useAudioPlayer();
 
 onMounted(async () => {
     let apiCharts = await api.getHotThisWeekCharts(currentPage.value);
     charts.value = apiCharts ?? [];
+    setPlaylist(charts.value);
 });
 
 function handlePrevious() {

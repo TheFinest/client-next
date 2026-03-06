@@ -41,7 +41,6 @@
                             v-for="chart in staffpicks"
                             :key="chart.id"
                             v-bind="chart"
-                            :chart-list="staffpicks"
                         />
                     </template>
                 </ChartGrid>
@@ -61,14 +60,17 @@ import SectionHeader from '@/components/SectionHeader.vue';
 import Remixicon from '@/components/Remixicon.vue';
 import ChartItemPlaceholder from '@/components/Charts/ChartItemPlaceholder.vue';
 import PromoItemPlaceholder from '@/components/Discover/PromoItemPlaceholder.vue';
+import { useAudioPlayer } from '@/composables/useAudioPlayer';
 
 const promos = ref([]);
 const staffpicks = ref([]);
 const api = inject('api');
+const { setPlaylist } = useAudioPlayer();
 
 onMounted(async () => {
     promos.value = await api.getPromos();
     staffpicks.value = (await api.getPlaylist(144))?.songs?.slice(0, 10) ?? [];
+    setPlaylist(staffpicks.value);
 });
 </script>
 

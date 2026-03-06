@@ -58,7 +58,11 @@ export function useAudioPlayer() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    function loadChart(chart, audioUrl, chartPlaylist = null, playlistIndex = -1) {
+    function setPlaylist(charts) {
+        playlist.value = charts && Array.isArray(charts) ? charts : [];
+    }
+
+    function loadChart(chart, audioUrl) {
         // Reset audio without changing isPlaying state — using stop() would
         // briefly set isPlaying to false and trigger BGM to fade back in.
         audioElement.pause();
@@ -67,12 +71,11 @@ export function useAudioPlayer() {
         currentTime.value = 0;
         duration.value = 0;
 
-        // If a playlist is provided, store it
-        if (chartPlaylist && Array.isArray(chartPlaylist)) {
-            playlist.value = chartPlaylist;
-            currentPlaylistIndex.value = playlistIndex >= 0 ? playlistIndex : chartPlaylist.findIndex(c => c.id === chart.id);
+        // Find chart in current playlist, or fall back to single-item playlist
+        const idx = playlist.value.findIndex(c => c.id === chart.id);
+        if (idx >= 0) {
+            currentPlaylistIndex.value = idx;
         } else {
-            // Single chart, no playlist
             playlist.value = [chart];
             currentPlaylistIndex.value = 0;
         }
@@ -96,7 +99,7 @@ export function useAudioPlayer() {
             }
 
             const audioUrl = nextChart.paths?.ogg ?? `https://spinsha.re/uploads/audio/${nextChart.fileReference}.ogg`;
-            loadChart(nextChart, audioUrl, playlist.value, nextIndex);
+            loadChart(nextChart, audioUrl);
             play();
         }
     }
@@ -115,7 +118,7 @@ export function useAudioPlayer() {
             }
 
             const audioUrl = prevChart.paths?.ogg ?? `https://spinsha.re/uploads/audio/${prevChart.fileReference}.ogg`;
-            loadChart(prevChart, audioUrl, playlist.value, prevIndex);
+            loadChart(prevChart, audioUrl);
             play();
         }
     }
@@ -251,6 +254,7 @@ export function useAudioPlayer() {
         formattedDuration,
 
         // Methods
+        setPlaylist,
         loadChart,
         play,
         pause,
