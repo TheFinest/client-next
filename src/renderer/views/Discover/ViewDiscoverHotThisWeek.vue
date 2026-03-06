@@ -1,7 +1,7 @@
 <template>
     <section class="page-discover-new">
         <ChartGrid>
-            <template v-if="charts.length === 0">
+            <template v-if="loading">
                 <ChartItemPlaceholder
                     v-for="n in 10"
                     :key="n"
@@ -29,7 +29,7 @@
             <button
                 class="button"
                 @click="handleNext"
-                :disabled="charts.length < 12"
+                :disabled="!hasNextPage"
                 v-interactable
             >
                 <span>{{ $t('discover.nextPage') }}</span>
@@ -42,7 +42,7 @@
 <script setup>
 import ChartGrid from '@/components/Charts/ChartGrid.vue';
 import ChartItem from '@/components/Charts/ChartItem.vue';
-import { inject, onMounted, ref } from 'vue';
+import { inject, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Remixicon from '@/components/Remixicon.vue';
 import ChartItemPlaceholder from '@/components/Charts/ChartItemPlaceholder.vue';
@@ -51,20 +51,36 @@ const route = useRoute();
 const router = useRouter();
 const currentPage = ref(Number(route.params.page) || 0);
 const charts = ref([]);
+const loading = ref(true);
+const hasNextPage = ref(false);
 const api = inject('api');
 
-onMounted(async () => {
-    let apiCharts = await api.getHotThisWeekCharts(currentPage.value);
+async function loadPage(page) {
+    hasNextPage.value = false;
+    const apiCharts = await api.getHotThisWeekCharts(page);
     charts.value = apiCharts ?? [];
+    loading.value = false;
+
+    if (charts.value.length === 12) {
+        const nextCharts = await api.getHotThisWeekCharts(page + 1);
+        hasNextPage.value = (nextCharts?.length ?? 0) > 0;
+    } else {
+        hasNextPage.value = false;
+    }
+}
+
+onMounted(() => loadPage(currentPage.value));
+
+watch(() => route.params.page, (page) => {
+    currentPage.value = Number(page) || 0;
+    loadPage(currentPage.value);
 });
 
 function handlePrevious() {
-    currentPage.value -= 1;
-    router.push({ name: route.name, params: { ...route.params, page: currentPage.value } });
+    router.push({ name: route.name, params: { ...route.params, page: currentPage.value - 1 } });
 }
 function handleNext() {
-    currentPage.value += 1;
-    router.push({ name: route.name, params: { ...route.params, page: currentPage.value } });
+    router.push({ name: route.name, params: { ...route.params, page: currentPage.value + 1 } });
 }
 </script>
 

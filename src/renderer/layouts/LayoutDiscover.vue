@@ -25,7 +25,7 @@
             </TabList>
         </nav>
         <main>
-            <router-view :key="route.params.page" />
+            <router-view />
         </main>
     </LayoutBase>
 </template>

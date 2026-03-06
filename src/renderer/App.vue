@@ -2,7 +2,7 @@
     <router-view v-slot="{ Component }">
         <component
             :is="Component"
-            :key="route.fullPath"
+            :key="route.matched[0]?.path"
         />
     </router-view>
 
