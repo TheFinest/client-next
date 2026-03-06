@@ -87,6 +87,15 @@
                 </div>
             </div>
         </div>
+        <button
+            v-if="!isLocalChart && !mini"
+            class="download-button"
+            @click.prevent="handleAddToQueue"
+            v-interactable
+            title="Add to download queue"
+        >
+            <Remixicon icon="download-2" />
+        </button>
         <div
             class="explicit-label"
             v-if="isExplicit && !settingShowExplicit"
@@ -267,7 +276,7 @@ async function handlePlayPreview(event) {
 
 <style scoped>
 .chart-item {
-    @apply bg-base-200 dark:bg-base-900 blur-none relative rounded-md overflow-hidden transition-all cursor-pointer text-left p-2 grid grid-cols-[auto_1fr] gap-4 items-center border border-transparent;
+    @apply bg-base-200 dark:bg-base-900 blur-none relative rounded-md overflow-hidden transition-all cursor-pointer text-left p-2 grid grid-cols-[auto_1fr_auto] gap-4 items-center border border-transparent;
 
     &.playing {
         @apply bg-brand-100 dark:bg-brand-950 border-brand-400 dark:border-brand-700;
@@ -366,16 +375,32 @@ async function handlePlayPreview(event) {
         }
     }
 
+    & .download-button {
+        @apply flex items-center justify-center w-10 h-10 mr-1 rounded-full opacity-0 transition-opacity bg-base-400/50 dark:bg-base-700/50;
+
+        &:hover {
+            @apply bg-brand-500/80 dark:bg-brand-600/80;
+        }
+
+        & .icon {
+            @apply text-base-800 dark:text-base-200 text-xl leading-none;
+        }
+    }
+
+    &:hover .download-button {
+        @apply opacity-100;
+    }
+
     &:hover {
         @apply bg-base-300 dark:bg-base-800;
     }
 
     &.local-chart {
-        @apply bg-transparent border border-base-300 dark:border-base-800 cursor-default;
+        @apply bg-transparent border border-base-300 dark:border-base-800 cursor-default grid-cols-[auto_1fr];
     }
 
     &.mini {
-        @apply p-2 py-1 gap-2;
+        @apply p-2 py-1 gap-2 grid-cols-[auto_1fr];
 
         & .cover {
             @apply w-[40px];
