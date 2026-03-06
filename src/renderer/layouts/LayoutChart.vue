@@ -6,13 +6,6 @@
             </section>
         </template>
         <template v-else>
-            <audio
-                ref="chartPreview"
-                :src="chart.paths.ogg"
-                @error="handlePreviewError"
-                @ended="stopPreview"
-            />
-
             <header class="chart">
                 <div
                     class="cover"
@@ -78,7 +71,7 @@
                             <Remixicon icon="download" />
                             <span>{{ $t('chart.addToQueue') }}</span>
                         </button>
-                        <template v-if="chartPreview && previewAvailable">
+                        <template v-if="previewAvailable">
                             <button
                                 class="button"
                                 v-if="!isPreviewPlaying"
@@ -231,7 +224,7 @@
 <script setup>
 import LayoutBase from '@/layouts/LayoutBase.vue';
 import { useRoute } from 'vue-router';
-import { inject, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue';
 import TabList from '@/components/Tabs/TabList.vue';
 import TabItemLink from '@/components/Tabs/TabItemLink.vue';
 import Remixicon from '@/components/Remixicon.vue';
@@ -239,24 +232,36 @@ import Loader from '@/components/Loader.vue';
 import { DownloadItem } from '../../main/queue/downloadQueueItem';
 import SectionHeader from '@/components/SectionHeader.vue';
 import router from '@/router';
+import { useAudioPlayer } from '@/composables/useAudioPlayer';
 
 const mitt = inject('mitt');
 const api = inject('api');
 const externalApi = inject('externalApi');
 const libraryManager = inject('libraryManager');
 const queue = inject('queue');
-const settingsManager = inject('settingsManager');
 const route = useRoute();
 const chartId = ref(route.params.chartId);
 const chart = ref(null);
 const cacheItem = ref(null);
 
-const chartPreview = ref(null);
-const chartPreviewTimeout = ref(null);
-const isPreviewPlaying = ref(false);
 const previewAvailable = ref(true);
 
 const playDialog = ref(null);
+
+// Use shared audio player
+const {
+    loadChart,
+    play,
+    stop,
+    isPlaying,
+    currentChart: playerCurrentChart,
+    setVolume,
+} = useAudioPlayer();
+
+// Only show stop button if *this* chart is the one currently playing
+const isPreviewPlaying = computed(() => {
+    return isPlaying.value && playerCurrentChart.value?.id === chart.value?.id;
+});
 
 onMounted(async () => {
     chart.value = await api.getChartDetail(chartId.value);
@@ -277,7 +282,6 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-    stopPreview();
     mitt.off('item-change');
 });
 
@@ -312,33 +316,16 @@ function handleCopyLink() {
     externalApi.copyText(`https://spinsha.re/song/${chart.value.id}`);
 }
 
-async function playPreview() {
-    if (chartPreview.value && previewAvailable.value) {
-        chartPreview.value.currentTime = 0;
-        chartPreview.value.volume = Math.pow(await settingsManager.get('previewVolume'), 2);
-        chartPreview.value.play();
-        isPreviewPlaying.value = true;
-        mitt.emit('preview-play');
-
-        chartPreviewTimeout.value = setTimeout(() => {
-            stopPreview();
-        }, 30 * 1000);
+function playPreview() {
+    if (previewAvailable.value && chart.value) {
+        const audioUrl = chart.value.paths?.ogg ?? `https://spinsha.re/uploads/audio/${chart.value.fileReference}.ogg`;
+        loadChart(chart.value, audioUrl);
+        play();
     }
 }
 
 function stopPreview() {
-    if (chartPreview.value && isPreviewPlaying.value) {
-        chartPreview.value.pause();
-        chartPreview.value.currentTime = 0;
-        isPreviewPlaying.value = false;
-        clearTimeout(chartPreviewTimeout.value);
-        mitt.emit('preview-stop');
-    }
-}
-
-function handlePreviewError(event) {
-    console.log('Preview audio failed to load:', event);
-    previewAvailable.value = false;
+    stop();
 }
 
 watch(

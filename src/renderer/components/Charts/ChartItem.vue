@@ -2,20 +2,40 @@
     <component
         :is="isLocalChart ? 'div' : RouterLink"
         :to="`/chart/${id || fileReference}`"
-        :class="`chart-item ${isExplicit && !settingShowExplicit ? 'explicit' : ''} ${mini ? 'mini' : ''} ${isLocalChart ? 'local-chart' : ''}`"
+        :class="`chart-item ${isExplicit && !settingShowExplicit ? 'explicit' : ''} ${mini ? 'mini' : ''} ${isLocalChart ? 'local-chart' : ''} ${isCurrentlyPlaying ? 'playing' : ''}`"
         @click.middle.prevent="handleAddToQueue"
         v-interactable="!isLocalChart"
     >
-        <div
-            v-if="!isLocal"
-            class="cover"
-            :style="`background-image: url('${cover}')`"
-        ></div>
-        <div
-            v-else
-            class="cover"
-            :style="`background-image: url('data:image/png;base64,${localCoverCache}')`"
-        ></div>
+        <div class="cover-container">
+            <div
+                v-if="!isLocal"
+                class="cover"
+                :style="`background-image: url('${cover}')`"
+            ></div>
+            <div
+                v-else
+                class="cover"
+                :style="`background-image: url('data:image/png;base64,${localCoverCache}')`"
+            ></div>
+            <button
+                v-if="!isLocalChart && !mini"
+                class="play-button"
+                @click.prevent="handlePlayPreview"
+                v-interactable
+                :title="isCurrentlyPlaying && audioIsPlaying ? 'Pause' : 'Play preview'"
+            >
+                <Remixicon
+                    v-if="isCurrentlyPlaying && audioIsPlaying"
+                    icon="pause"
+                    filled
+                />
+                <Remixicon
+                    v-else
+                    icon="play"
+                    filled
+                />
+            </button>
+        </div>
         <div class="content">
             <div class="meta">
                 <h2>{{ title }}</h2>
@@ -67,6 +87,15 @@
                 </div>
             </div>
         </div>
+        <button
+            v-if="!isLocalChart && !mini"
+            class="download-button"
+            @click.prevent="handleAddToQueue"
+            v-interactable
+            title="Add to download queue"
+        >
+            <Remixicon icon="download-2" />
+        </button>
         <div
             class="explicit-label"
             v-if="isExplicit && !settingShowExplicit"
@@ -80,6 +109,8 @@
 import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
 import { DownloadItem } from '../../../main/queue/downloadQueueItem';
 import { RouterLink } from 'vue-router';
+import { useAudioPlayer } from '@/composables/useAudioPlayer';
+import Remixicon from '@/components/Remixicon.vue';
 
 const props = defineProps({
     id: {
@@ -170,11 +201,25 @@ const props = defineProps({
 
 const mitt = inject('mitt');
 const queue = inject('queue');
+const api = inject('api');
 const settingsManager = inject('settingsManager');
 const libraryManager = inject('libraryManager');
 const settingShowExplicit = ref(false);
 const localCoverCache = ref(null);
 const cacheUpdateHash = ref(null);
+
+// Audio player
+const {
+    currentChart,
+    isPlaying: audioIsPlaying,
+    loadChart,
+    play,
+    pause,
+} = useAudioPlayer();
+
+const isCurrentlyPlaying = computed(() => {
+    return currentChart.value?.id === props.id || currentChart.value?.fileReference === props.fileReference;
+});
 
 onMounted(async () => {
     settingShowExplicit.value = await settingsManager.get('showExplicit');
@@ -204,11 +249,38 @@ async function handleAddToQueue() {
     const newDownloadItem = new DownloadItem(props.id, props.cover, props.title, props.artist, props.charter, props.fileReference);
     await queue.addQueueItem(newDownloadItem);
 }
+
+async function handlePlayPreview(event) {
+    // Prevent navigation when clicking play button
+    event.stopPropagation();
+
+    if (isCurrentlyPlaying.value && audioIsPlaying.value) {
+        // If this chart is currently playing, pause it
+        pause();
+    } else {
+        // Fetch the full chart details to get the correct audio path
+        const fullChartData = await api.getChartDetail(props.id);
+
+        if (!fullChartData) {
+            console.error('Failed to fetch chart details');
+            return;
+        }
+        const audioUrl = fullChartData.paths?.ogg;
+        if (!audioUrl) return;
+
+        loadChart(props, audioUrl);
+        play();
+    }
+}
 </script>
 
 <style scoped>
 .chart-item {
-    @apply bg-base-200 dark:bg-base-900 blur-none relative rounded-md overflow-hidden transition-all cursor-pointer text-left p-2 grid grid-cols-[auto_1fr] gap-4 items-center;
+    @apply bg-base-200 dark:bg-base-900 blur-none relative rounded-md overflow-hidden transition-all cursor-pointer text-left p-2 grid grid-cols-[auto_1fr_auto] gap-4 items-center border border-transparent;
+
+    &.playing {
+        @apply bg-brand-100 dark:bg-brand-950 border-brand-400 dark:border-brand-700;
+    }
 
     &.explicit {
         @apply transition-all;
@@ -232,8 +304,29 @@ async function handleAddToQueue() {
         }
     }
 
+    & .cover-container {
+        @apply relative;
+    }
+
     & .cover {
         @apply aspect-square w-[80px] rounded bg-center bg-cover;
+    }
+
+    & .play-button {
+        @apply absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity rounded;
+
+        &:hover {
+            @apply bg-black/70;
+        }
+
+        & .icon {
+            @apply text-white text-3xl drop-shadow-[0_0_10px_rgba(100,235,160,0.9)];
+        }
+    }
+
+    &:hover .play-button,
+    &.playing .play-button {
+        @apply opacity-100;
     }
     & .content {
         @apply flex flex-col gap-3 overflow-hidden;
@@ -282,16 +375,32 @@ async function handleAddToQueue() {
         }
     }
 
+    & .download-button {
+        @apply flex items-center justify-center w-10 h-10 mr-1 rounded-full opacity-0 transition-opacity bg-base-400/50 dark:bg-base-700/50;
+
+        &:hover {
+            @apply bg-brand-500/80 dark:bg-brand-600/80;
+        }
+
+        & .icon {
+            @apply text-base-800 dark:text-base-200 text-xl leading-none;
+        }
+    }
+
+    &:hover .download-button {
+        @apply opacity-100;
+    }
+
     &:hover {
         @apply bg-base-300 dark:bg-base-800;
     }
 
     &.local-chart {
-        @apply bg-transparent border border-base-300 dark:border-base-800 cursor-default;
+        @apply bg-transparent border border-base-300 dark:border-base-800 cursor-default grid-cols-[auto_1fr];
     }
 
     &.mini {
-        @apply p-2 py-1 gap-2;
+        @apply p-2 py-1 gap-2 grid-cols-[auto_1fr];
 
         & .cover {
             @apply w-[40px];

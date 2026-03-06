@@ -50,6 +50,7 @@
 import LayoutBase from '@/layouts/LayoutBase.vue';
 import Loader from '@/components/Loader.vue';
 import { inject, onMounted, onUnmounted, ref } from 'vue';
+import { useAudioPlayer } from '@/composables/useAudioPlayer';
 import EmptyState from '@/components/EmptyState.vue';
 import SectionHeader from '@/components/SectionHeader.vue';
 import Remixicon from '@/components/Remixicon.vue';
@@ -61,10 +62,12 @@ const settingsManager = inject('settingsManager');
 const externalApi = inject('externalApi');
 const libraryManager = inject('libraryManager');
 const mitt = inject('mitt');
+const { setPlaylist } = useAudioPlayer();
 
 onMounted(async () => {
     mitt.on('cache-change', onCacheChange);
     library.value = await libraryManager.getAll();
+    setPlaylist(library.value);
 });
 
 onUnmounted(() => {
@@ -73,6 +76,7 @@ onUnmounted(() => {
 
 function onCacheChange(cacheItems) {
     library.value = cacheItems;
+    setPlaylist(library.value);
 }
 
 async function handleOpen() {

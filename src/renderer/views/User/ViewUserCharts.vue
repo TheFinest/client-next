@@ -28,6 +28,7 @@
 import ChartGrid from '@/components/Charts/ChartGrid.vue';
 import ChartItem from '@/components/Charts/ChartItem.vue';
 import { onMounted, ref, inject } from 'vue';
+import { useAudioPlayer } from '@/composables/useAudioPlayer';
 import { useRoute } from 'vue-router';
 import Loader from '@/components/Loader.vue';
 import EmptyState from '@/components/EmptyState.vue';
@@ -44,8 +45,11 @@ const props = defineProps({
     },
 });
 
+const { setPlaylist } = useAudioPlayer();
+
 onMounted(async () => {
     charts.value = await api.getUserCharts(userId);
+    setPlaylist(charts.value);
 });
 </script>
 
