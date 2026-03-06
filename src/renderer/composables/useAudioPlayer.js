@@ -26,16 +26,47 @@ audioElement.addEventListener('durationchange', () => {
     }
 });
 audioElement.addEventListener('ended', () => {
-    // Inline stop logic to avoid referencing the function before it's defined
+    // Auto-advance to next song if not at end of playlist
+    const nextIndex = currentPlaylistIndex.value + 1;
+    if (nextIndex < playlist.value.length) {
+        handlePlayAtIndex(nextIndex);
+    } else {
+        // End of playlist — stop without clearing the playlist
+        audioElement.pause();
+        audioElement.currentTime = 0;
+        isPlaying.value = false;
+        currentTime.value = 0;
+        duration.value = 0;
+        currentChart.value = null;
+        currentPlaylistIndex.value = -1;
+    }
+});
+
+async function handlePlayAtIndex(index) {
+    let chart = playlist.value[index];
+    if (!chart) return;
+
+    if (!chart.paths?.ogg) {
+        const fullChart = await window.spshApi.getChartDetail(chart.id);
+        if (fullChart) chart = fullChart;
+    }
+
+    const audioUrl = chart.paths?.ogg ?? `https://spinsha.re/uploads/audio/${chart.fileReference}.ogg`;
+
     audioElement.pause();
     audioElement.currentTime = 0;
-    isPlaying.value = false;
+    currentChart.value = chart;
     currentTime.value = 0;
     duration.value = 0;
-    currentChart.value = null;
-    playlist.value = [];
-    currentPlaylistIndex.value = -1;
-});
+    currentPlaylistIndex.value = index;
+
+    if (audioUrl) {
+        audioElement.src = audioUrl;
+    }
+    audioElement.volume = volume.value;
+    audioElement.play().catch(() => {});
+    isPlaying.value = true;
+}
 
 export function useAudioPlayer() {
     const progress = computed(() => {
@@ -126,7 +157,7 @@ export function useAudioPlayer() {
     function play() {
         if (currentChart.value) {
             audioElement.volume = volume.value;
-            audioElement.play();
+            audioElement.play().catch(() => {});
             isPlaying.value = true;
         }
     }
@@ -143,7 +174,6 @@ export function useAudioPlayer() {
         currentTime.value = 0;
         duration.value = 0;
         currentChart.value = null;
-        playlist.value = [];
         currentPlaylistIndex.value = -1;
     }
 
